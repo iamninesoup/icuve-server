@@ -14,7 +14,7 @@ GMAIL_USER   = 'icuvenews@gmail.com'
 GMAIL_PASS   = 'wdui gjgj dziu qltt'
 SENDER_NAME  = 'iCUVE'
 SMTP_SERVER  = 'smtp.gmail.com'
-SMTP_PORT    = 587
+SMTP_PORT    = 465
 CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY', '')  # Render 환경변수에서 읽음
 
 @app.route('/ping', methods=['GET'])
@@ -71,9 +71,7 @@ def send():
         msg['To']      = f'{to_name} <{to_email}>' if to_name else to_email
         msg.attach(MIMEText(html, 'html', 'utf-8'))
 
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.ehlo()
-            server.starttls()
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
             server.login(GMAIL_USER, GMAIL_PASS)
             server.sendmail(GMAIL_USER, to_email, msg.as_string())
 
