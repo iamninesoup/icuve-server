@@ -1,26 +1,22 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 import requests as req
 import os
 
 app = Flask(__name__)
 CORS(app)
 
-# ── 고정값 ──
-GMAIL_USER   = 'icuvenews@gmail.com'
-GMAIL_PASS   = 'wdui gjgj dziu qltt'
-SENDER_NAME  = 'iCUVE'
-SMTP_SERVER  = 'smtp.gmail.com'
-SMTP_PORT    = 465
+# ── 환경변수 ──
 CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY', '')
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+SENDER_EMAIL   = 'onboarding@resend.dev'
+SENDER_NAME    = 'iCUVE'
 
 @app.route('/ping', methods=['GET'])
 def ping():
     return jsonify({'ok': True, 'message': 'iCUVE 서버 정상 작동 중'})
 
+# ── Claude API 프록시 ──
 @app.route('/ai', methods=['POST'])
 def ai():
     try:
@@ -28,6 +24,7 @@ def ai():
         messages = data.get('messages', [])
         if not messages:
             return jsonify({'ok': False, 'error': '메시지 없음'})
+
         response = req.post(
             'https://api.anthropic.com/v1/messages',
             headers={
@@ -46,9 +43,11 @@ def ai():
         if 'error' in result:
             return jsonify({'ok': False, 'error': result['error']['message']})
         return jsonify({'ok': True, 'content': result['content']})
+
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
 
+# ── 이메일 발송 (Resend API) ──
 @app.route('/send', methods=['POST'])
 def send():
     try:
@@ -57,17 +56,33 @@ def send():
         to_name  = data.get('to_name', '').strip()
         subject  = data.get('subject', '').strip()
         html     = data.get('html', '')
+
         if not to_email or not subject:
             return jsonify({'ok': False, 'error': '수신자 또는 제목 누락'})
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From']    = f'{SENDER_NAME} <{GMAIL_USER}>'
-        msg['To']      = f'{to_name} <{to_email}>' if to_name else to_email
-        msg.attach(MIMEText(html, 'html', 'utf-8'))
-        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
-            server.login(GMAIL_USER, GMAIL_PASS)
-            server.sendmail(GMAIL_USER, to_email, msg.as_string())
-        return jsonify({'ok': True})
+
+        to_formatted = f'{to_name} <{to_email}>' if to_name else to_email
+
+        response = req.post(
+            'https://api.resend.com/emails',
+            headers={
+                'Authorization': f'Bearer {RESEND_API_KEY}',
+                'Content-Type': 'application/json'
+            },
+            json={
+                'from': f'{SENDER_NAME} <{SENDER_EMAIL}>',
+                'to': [to_formatted],
+                'subject': subject,
+                'html': html
+            },
+            timeout=30
+        )
+
+        result = response.json()
+        if response.status_code == 200 or response.status_code == 201:
+            return jsonify({'ok': True, 'id': result.get('id')})
+        else:
+            return jsonify({'ok': False, 'error': result.get('message', '발송 실패')})
+
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
 
