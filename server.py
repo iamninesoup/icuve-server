@@ -8,8 +8,8 @@ CORS(app)
 
 # ── 환경변수 ──
 CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY', '')
-RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-SENDER_EMAIL   = 'onboarding@resend.dev'
+BREVO_API_KEY  = os.environ.get('BREVO_API_KEY', '')
+SENDER_EMAIL   = 'backstage@icuve.kr'
 SENDER_NAME    = 'iCUVE'
 
 @app.route('/ping', methods=['GET'])
@@ -47,7 +47,7 @@ def ai():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
 
-# ── 이메일 발송 (Resend API) ──
+# ── 이메일 발송 (Brevo API) ──
 @app.route('/send', methods=['POST'])
 def send():
     try:
@@ -60,26 +60,26 @@ def send():
         if not to_email or not subject:
             return jsonify({'ok': False, 'error': '수신자 또는 제목 누락'})
 
-        to_formatted = f'{to_name} <{to_email}>' if to_name else to_email
+        payload = {
+            'sender': {'name': SENDER_NAME, 'email': SENDER_EMAIL},
+            'to': [{'email': to_email, 'name': to_name}],
+            'subject': subject,
+            'htmlContent': html
+        }
 
         response = req.post(
-            'https://api.resend.com/emails',
+            'https://api.brevo.com/v3/smtp/email',
             headers={
-                'Authorization': f'Bearer {RESEND_API_KEY}',
+                'api-key': BREVO_API_KEY,
                 'Content-Type': 'application/json'
             },
-            json={
-                'from': f'{SENDER_NAME} <{SENDER_EMAIL}>',
-                'to': [to_formatted],
-                'subject': subject,
-                'html': html
-            },
+            json=payload,
             timeout=30
         )
 
         result = response.json()
-        if response.status_code == 200 or response.status_code == 201:
-            return jsonify({'ok': True, 'id': result.get('id')})
+        if response.status_code == 201:
+            return jsonify({'ok': True, 'messageId': result.get('messageId')})
         else:
             return jsonify({'ok': False, 'error': result.get('message', '발송 실패')})
 
