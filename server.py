@@ -6,9 +6,8 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# ── 환경변수 ──
 CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY', '')
-BREVO_API_KEY  = os.environ.get('BREVO_API_KEY', '')
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 SENDER_EMAIL   = 'backstage@icuve.kr'
 SENDER_NAME    = 'iCUVE'
 
@@ -16,7 +15,6 @@ SENDER_NAME    = 'iCUVE'
 def ping():
     return jsonify({'ok': True, 'message': 'iCUVE 서버 정상 작동 중'})
 
-# ── Claude API 프록시 ──
 @app.route('/ai', methods=['POST'])
 def ai():
     try:
@@ -47,7 +45,6 @@ def ai():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)})
 
-# ── 이메일 발송 (Brevo API) ──
 @app.route('/send', methods=['POST'])
 def send():
     try:
@@ -60,26 +57,26 @@ def send():
         if not to_email or not subject:
             return jsonify({'ok': False, 'error': '수신자 또는 제목 누락'})
 
-        payload = {
-            'sender': {'name': SENDER_NAME, 'email': SENDER_EMAIL},
-            'to': [{'email': to_email, 'name': to_name}],
-            'subject': subject,
-            'htmlContent': html
-        }
+        to_formatted = f'{to_name} <{to_email}>' if to_name else to_email
 
         response = req.post(
-            'https://api.brevo.com/v3/smtp/email',
+            'https://api.resend.com/emails',
             headers={
-                'api-key': BREVO_API_KEY,
+                'Authorization': f'Bearer {RESEND_API_KEY}',
                 'Content-Type': 'application/json'
             },
-            json=payload,
+            json={
+                'from': f'{SENDER_NAME} <{SENDER_EMAIL}>',
+                'to': [to_formatted],
+                'subject': subject,
+                'html': html
+            },
             timeout=30
         )
 
         result = response.json()
-        if response.status_code == 201:
-            return jsonify({'ok': True, 'messageId': result.get('messageId')})
+        if response.status_code in [200, 201]:
+            return jsonify({'ok': True, 'id': result.get('id')})
         else:
             return jsonify({'ok': False, 'error': result.get('message', '발송 실패')})
 
