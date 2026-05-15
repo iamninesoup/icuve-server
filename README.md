@@ -43,6 +43,34 @@
 
 ---
 
+## 🔗 사용 중인 서비스
+
+### 호스팅 / 서버
+| 서비스 | 용도 | 링크 |
+|--------|------|------|
+| GitHub Pages | index.html 프론트엔드 호스팅 | [바로가기](https://iamninesoup.github.io/icuve-server/) |
+| Render | Flask 서버(server.py) 호스팅 | [barogage](https://icuve-server.onrender.com) |
+
+### API / 서비스
+| 서비스 | 용도 | 링크 |
+|--------|------|------|
+| Anthropic Claude API | AI 글 자동 생성 | [console.anthropic.com](https://console.anthropic.com) |
+| Cloudinary | 공연 사진 업로드 및 CDN | [cloudinary.com](https://cloudinary.com) |
+| Resend | 이메일 발송 (`backstage@icuve.kr`) | [resend.com](https://resend.com) |
+
+### 도메인
+| 서비스 | 용도 | 링크 |
+|--------|------|------|
+| 가비아 | icuve.kr 도메인 구매 및 DNS 관리 | [gabia.com](https://gabia.com) |
+
+### 라이브러리 (코드 내)
+| 라이브러리 | 용도 |
+|-----------|------|
+| Quill.js | 본문 리치 텍스트 에디터 |
+| Google Fonts | Bebas Neue, Noto Sans KR |
+
+---
+
 ## 📁 파일 구조
 
 ```
